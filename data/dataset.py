@@ -83,16 +83,23 @@ def get_sign_data():
 
 class Sign_Language_Dataset(Dataset):
     def __init__(self):
-        sign_dict = get_sign_data() # Download and process the dataset
+        self.sign_dict = get_sign_data()
     
     def __len__(self):
-        ...
+        return len(self.sign_dict["label"].shape[0])
     
     def __getitem__(self, idx):
-        ...
+        return dict(
+            emg = self.sign_dict["emg"][idx], 
+            imu_acc = self.sign_dict["imu_acc"][idx], 
+            imu_gyro = self.sign_dict["imu_gyro"][idx], 
+            imu_ori = self.sign_dict["imu_ori"][idx], 
+            label = self.sign_dict["label"][idx], 
+        )
 
 if __name__ == "__main__":
-    import os
+    dataset = Sign_Language_Dataset()
     
-    sdict = get_sign_data()
-    print([value.shape for value in sdict.values()])
+    sample = dataset[100:102]
+    print(sample["label"].shape)
+    print(sample["label"])
