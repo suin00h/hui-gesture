@@ -13,13 +13,13 @@ DATA_PROCESSED_DIR = os.path.join(DATA_ROOT_DIR, "processed")
 
 SIGN_LABELS = [chr(i + 65) for i in range(26)]
 
-def is_raw__sign_downloaded():
+def is_raw_sign_downloaded():
     return os.path.isdir(
         os.path.join(DATA_RAW_DIR, "sign-lang")
     )
 
 def get_raw_sign_data():
-    if is_raw__sign_downloaded():
+    if is_raw_sign_downloaded():
         print("Raw sign language dataset already exists!")
         return
     
