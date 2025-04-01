@@ -1,6 +1,7 @@
 .DS_STORE
 dummy.py
 
+__pycache__
 data/raw/*
 
 !.gitkeep
