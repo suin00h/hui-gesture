@@ -26,8 +26,20 @@ def train(dataloader, net, opt, crit, device):
     
     return train_loss
 
-def test():
-    ...
+def test(dataloader, net, crit, device):
+    net.eval()
+    
+    test_loss = []
+    for batch in dataloader:
+        input_imu = batch["imu_acc"].float().to(device)
+        label = batch["label"].long().to(device)
+        
+        class_output = net(input_imu)
+        
+        loss = crit(class_output, label)
+        test_loss.append(loss.item())
+    
+    return test_loss
 
 def run():
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -40,18 +52,29 @@ def run():
         num_workers=2, 
         pin_memory=True
     )
+    test_dataloader = torch.utils.data.DataLoader(
+        test_dataset, 
+        batch_size=100, 
+        shuffle=True, 
+        num_workers=2, 
+        pin_memory=True
+    )
     net = DeepConvLSTM(3, 400, kernel_size=10, stride=2)
     opt = optim.Adam(net.parameters(), lr=2e-4)
     crit = nn.CrossEntropyLoss()
     
     train_loss_list = []
+    test_loss_list = []
     
     net.to(device)
     for e in tqdm(range(1)):
         train_loss = train(train_dataloader, net, opt, crit, device)
         train_loss_list.append(np.mean(train_loss))
         
-        test()
+        test_loss = test(test_dataloader, net, crit, device)
+        test_loss_list.append(np.mean(test_loss))
+    
+    return train_loss_list, test_loss_list
 
 if __name__ == "__main__":
     run()
