@@ -63,18 +63,21 @@ class DeepConvLSTM(nn.Module):
         
         return hidden
     
-    def forward(self, x, h):
+    #def forward(self, x, h):
+    def forward(self, x):
         x = torch.transpose(x, 1, 2)
         for conv in self.conv_list:
             x = conv(x)
         
         x = torch.transpose(x, 1, 2)
-        x, h = self.lstm(x, h)
+        #x, h = self.lstm(x, h)
+        x, _     = self.lstm(x)
         
         x = x.contiguous().view(-1, self.fc_input_size)
         x = self.fc(x)
         
-        return x, h
+        # return x, h
+        return x
 
 if __name__ == "__main__":
     net = DeepConvLSTM(3, 400, kernel_size=10, stride=2)

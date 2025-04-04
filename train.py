@@ -7,22 +7,22 @@ from torch import optim
 from data.dataset import Sign_Language_Dataset
 from models.models import DeepConvLSTM
 
-def train(dataloader, net, opt, crit):
+def train(dataloader, net, opt, crit, device):
     net.train()
-    net.cuda()
     
-    h_0, c_0 = net.get_hidden_state(400)
-    hidden = (h_0.cuda(), c_0.cuda())
+    h_0, c_0 = net.get_hidden_state(100)
+    hidden = (h_0.to(device), c_0.to(device))
     
     train_loss = []
-    for batch in tqdm(dataloader):
-        input_imu = torch.Tensor(batch["imu_acc"]).cuda()
-        label = torch.Tensor(batch["label"]).cuda()
+    for batch in dataloader:
+        input_imu = batch["imu_acc"].float().to(device)
+        label = batch["label"].long().to(device)
         hidden = tuple([each.data for each in hidden])
         
         opt.zero_grad()
         
-        class_output, hidden = net(input_imu, hidden)
+        # class_output, hidden = net(input_imu, hidden)
+        class_output = net(input_imu)
         
         loss = crit(class_output, label)
         train_loss.append(loss.item())
@@ -35,6 +35,7 @@ def test():
     ...
 
 def run():
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     dataset = Sign_Language_Dataset()
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2])
     train_dataloader = torch.utils.data.DataLoader(
@@ -50,8 +51,9 @@ def run():
     
     train_loss_list = []
     
-    for e in range(200):
-        train_loss = train(train_dataloader, net, opt, crit)
+    net.to(device)
+    for e in tqdm(range(1)):
+        train_loss = train(train_dataloader, net, opt, crit, device)
         train_loss_list.append(np.mean(train_loss))
         
         test()
