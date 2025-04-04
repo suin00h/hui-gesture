@@ -55,28 +55,18 @@ class DeepConvLSTM(nn.Module):
         for _ in range(len(self.conv_channels) - 1):
             size = (size - self.kernel_size) // self.stride + 1
         return size
-
-    def get_hidden_state(self, batch_size):
-        weight = next(self.parameters()).data
-        hidden = (weight.new(2, batch_size, 128).zero_(),
-                  weight.new(2, batch_size, 128).zero_())
-        
-        return hidden
     
-    #def forward(self, x, h):
     def forward(self, x):
         x = torch.transpose(x, 1, 2)
         for conv in self.conv_list:
             x = conv(x)
         
         x = torch.transpose(x, 1, 2)
-        #x, h = self.lstm(x, h)
-        x, _     = self.lstm(x)
+        x, _ = self.lstm(x)
         
         x = x.contiguous().view(-1, self.fc_input_size)
         x = self.fc(x)
         
-        # return x, h
         return x
 
 if __name__ == "__main__":

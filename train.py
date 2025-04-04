@@ -10,18 +10,13 @@ from models.models import DeepConvLSTM
 def train(dataloader, net, opt, crit, device):
     net.train()
     
-    h_0, c_0 = net.get_hidden_state(100)
-    hidden = (h_0.to(device), c_0.to(device))
-    
     train_loss = []
     for batch in dataloader:
         input_imu = batch["imu_acc"].float().to(device)
         label = batch["label"].long().to(device)
-        hidden = tuple([each.data for each in hidden])
         
         opt.zero_grad()
         
-        # class_output, hidden = net(input_imu, hidden)
         class_output = net(input_imu)
         
         loss = crit(class_output, label)
@@ -46,7 +41,7 @@ def run():
         pin_memory=True
     )
     net = DeepConvLSTM(3, 400, kernel_size=10, stride=2)
-    opt = optim.Adam(net.parameters(), lr=0.02)
+    opt = optim.Adam(net.parameters(), lr=2e-4)
     crit = nn.CrossEntropyLoss()
     
     train_loss_list = []
