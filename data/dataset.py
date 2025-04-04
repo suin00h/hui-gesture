@@ -86,7 +86,7 @@ class Sign_Language_Dataset(Dataset):
         self.sign_dict = get_sign_data()
     
     def __len__(self):
-        return len(self.sign_dict["label"].shape[0])
+        return self.sign_dict["label"].shape[0]
     
     def __getitem__(self, idx):
         return dict(
