@@ -4,13 +4,13 @@ from torch import nn
 
 class DeepConvLSTM(nn.Module):
     def __init__(
-        self, 
+        self,
         sensor_channels,
-        input_length, 
-        kernel_size=5, 
-        stride=1, 
-        lstm_hidden_size=128, 
-        lstm_layers=2, 
+        input_length,
+        kernel_size=5,
+        stride=1,
+        lstm_hidden_size=128,
+        lstm_layers=2,
         num_classes=26
     ):
         super().__init__()
@@ -26,27 +26,26 @@ class DeepConvLSTM(nn.Module):
         
         self.conv_list = nn.ModuleList([
             self.get_conv_layer(
-                self.conv_channels[i], 
-                self.conv_channels[i+1], 
+                self.conv_channels[i],
+                self.conv_channels[i+1],
             ) for i in range(len(self.conv_channels) - 1)
         ])
         self.lstm = nn.LSTM(
-            self.conv_channels[-1], 
-            self.lstm_hidden_size, 
-            self.lstm_layers, 
+            self.conv_channels[-1],
+            self.lstm_hidden_size,
+            self.lstm_layers,
             batch_first=True
         )
         self.fc_input_size = self.compute_conv_output_size() \
             * self.lstm_hidden_size
         self.fc = nn.Sequential(
-            nn.Linear(self.fc_input_size, self.num_classes), 
+            nn.Linear(self.fc_input_size, self.num_classes),
             nn.Softmax(dim=1)
         )
     
     def get_conv_layer(self, in_channels, out_channels):
         return nn.Sequential(
-            nn.Conv1d(in_channels, out_channels, 
-                      self.kernel_size, self.stride),
+            nn.Conv1d(in_channels, out_channels, self.kernel_size, self.stride),
             nn.ReLU()
         )
     
@@ -70,8 +69,4 @@ class DeepConvLSTM(nn.Module):
         return x
 
 if __name__ == "__main__":
-    net = DeepConvLSTM(3, 400, kernel_size=10, stride=2)
-    h = net.get_hidden_state(100)
-    x = torch.randn((100, 400, 3))
-    x_, h_ = net(x, h)
-    print(x_.shape)
+    ...

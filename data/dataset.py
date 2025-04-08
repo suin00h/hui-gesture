@@ -71,7 +71,7 @@ def process_sign_data(filename):
 
 def get_sign_data():
     processed_file = os.path.join(
-        DATA_PROCESSED_DIR, 
+        DATA_PROCESSED_DIR,
         "sign-data-dict.pkl"
     )
     if not is_processed(processed_file):
@@ -90,11 +90,11 @@ class Sign_Language_Dataset(Dataset):
     
     def __getitem__(self, idx):
         return dict(
-            emg = self.sign_dict["emg"][idx], 
-            imu_acc = self.sign_dict["imu_acc"][idx], 
-            imu_gyro = self.sign_dict["imu_gyro"][idx], 
-            imu_ori = self.sign_dict["imu_ori"][idx], 
-            label = self.sign_dict["label"][idx], 
+            emg = self.sign_dict["emg"][idx],
+            imu_acc = self.sign_dict["imu_acc"][idx],
+            imu_gyro = self.sign_dict["imu_gyro"][idx],
+            imu_ori = self.sign_dict["imu_ori"][idx],
+            label = self.sign_dict["label"][idx]
         )
 
 if __name__ == "__main__":
