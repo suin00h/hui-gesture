@@ -8,6 +8,33 @@ from torch import optim
 from data.dataset import Sign_Language_Dataset
 from models.models import DeepConvLSTM
 
+SETTINGS = [
+    dict(
+        setting_name = "Only acceleration",
+        in_channels = 3,
+        in_sensors = ["imu_acc"]
+    ),
+    dict(
+        setting_name = "Only gyroscope",
+        in_channels = 3,
+        in_sensors = ["imu_gyro"]
+    ),
+    dict(
+        setting_name = "Only orientation",
+        in_channels = 4,
+        in_sensors = ["imu_ori"]
+    ),
+    dict(
+        setting_name = "All sensor w/ input level concatenation",
+        in_channels = 3 + 3 + 4 + 8,
+        in_sensors = ["imu_acc", "imu_gyro", "imu_ori", "emg"]
+    )
+]
+
+def get_concatenated_sensor(args, batch):
+    batch_list = [batch[sensor] for sensor in args.in_sensors]
+    return torch.cat(batch_list, dim=2)
+
 def train(args):
     net = args.net
     opt = args.optimizer
@@ -22,12 +49,12 @@ def train(args):
     dataloader = args.dataloaders[0]
     net.train()
     for batch in dataloader:
-        input_imu = batch["imu_acc"].float().to(device)
+        sensor_input = get_concatenated_sensor(args, batch).float().to(device)
         label = batch["label"].long().to(device)
         
         opt.zero_grad()
         
-        net_output = net(input_imu)
+        net_output = net(sensor_input)
         
         loss = crit(net_output, label)
         train_loss.append(loss.item())
@@ -41,10 +68,10 @@ def train(args):
     dataloader = args.dataloaders[1]
     net.eval()
     for batch in dataloader:
-        input_imu = batch["imu_acc"].float().to(device)
+        sensor_input = get_concatenated_sensor(args, batch).float().to(device)
         label = batch["label"].long().to(device)
         
-        net_output = net(input_imu)
+        net_output = net(sensor_input)
         
         loss = crit(net_output, label)
         val_loss.append(loss.item())
@@ -71,10 +98,10 @@ def test(args):
     dataloader = args.dataloaders[2]
     net.eval()
     for batch in dataloader:
-        input_imu = batch["imu_acc"].float().to(device)
+        sensor_input = get_concatenated_sensor(args, batch).float().to(device)
         label = batch["label"].long().to(device)
         
-        net_output = net(input_imu)
+        net_output = net(sensor_input)
         
         loss = crit(net_output, label)
         test_loss.append(loss.item())
@@ -99,6 +126,7 @@ def get_dataloader(dataset, args):
 def get_parser():
     parser = argparse.ArgumentParser()
     
+    parser.add_argument("--preset-idx", default=0, type=int)
     parser.add_argument("--epoch", default=200, type=int)
     parser.add_argument("--batch-size", default=100, type=int)
     parser.add_argument("--learning-rate", default=2e-4, type=float)
@@ -114,10 +142,23 @@ def get_parser():
     parser.add_argument("--accuracy")
     parser.add_argument("--f1score")
     
+    parser.add_argument("--setting-name")
+    parser.add_argument("--in-channels")
+    parser.add_argument("--in-sensors")
+    
     return parser
+
+def get_settings(args):
+    preset_dict = SETTINGS[args.preset_idx]
+    args.setting_name = preset_dict["setting_name"]
+    args.in_channels = preset_dict["in_channels"]
+    args.in_sensors = preset_dict["in_sensors"]
+    
+    return
 
 def run(custom_arg=None):
     args = get_parser().parse_args(args=custom_arg)
+    get_settings(args)
     
     args.device = "cuda" if torch.cuda.is_available() else "cpu"
     
@@ -126,7 +167,7 @@ def run(custom_arg=None):
     args.dataset_sizes = [len(split) for split in dataset_split]
     args.dataloaders = [get_dataloader(split, args) for split in dataset_split]
     
-    args.net = DeepConvLSTM(3, 400, kernel_size=10, stride=2)
+    args.net = DeepConvLSTM(args.in_channels, 400, kernel_size=10, stride=2)
     args.optimizer = optim.Adam(args.net.parameters(), lr=args.learning_rate)
     args.criterion = nn.CrossEntropyLoss()
     args.loss = dict(
@@ -150,10 +191,8 @@ def run(custom_arg=None):
         train(args)
     test(args)
     
-    return args.loss, args.accuracy, args.f1score
+    return args
 
 if __name__ == "__main__":
-    loss, acc, f1 = run()    # run([]) for colab environment
-    print(loss)
-    print(acc)
-    print(f1)
+    args = run()    # run([]) for colab environment
+    print(args.loss["test_loss"])
