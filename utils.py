@@ -88,6 +88,10 @@ def set_metrics(args, metrics):
         })
     return
 
+def show_settings():
+    for i, setting in enumerate(SETTINGS):
+        print(f"{i}: {setting["setting_name"]}")
+
 def run_epoch(args, phase: str):
     no_train = phase_idx = ["train", "val", "test"].index(phase)
     dataloaders = args.dataloaders[phase_idx]
