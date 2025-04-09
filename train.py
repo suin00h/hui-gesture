@@ -55,5 +55,5 @@ def run(custom_arg=None):
     return args
 
 if __name__ == "__main__":
-    args = run()    # run([]) for colab environment
+    args = run()    # run([]) or run("{custom arguments}") for colab environment
     print(args.loss["test_loss"])
