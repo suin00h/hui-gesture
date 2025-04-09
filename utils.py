@@ -90,7 +90,8 @@ def set_metrics(args, metrics):
 
 def show_settings():
     for i, setting in enumerate(SETTINGS):
-        print(f"{i}: {setting["setting_name"]}")
+        print(f"{i}: {setting['setting_name']}")
+    return
 
 def run_epoch(args, phase: str):
     no_train = phase_idx = ["train", "val", "test"].index(phase)
