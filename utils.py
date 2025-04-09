@@ -1,6 +1,8 @@
 import argparse
 import torch
 
+from sklearn import metrics
+
 SETTINGS = [
     dict(
         setting_name = "Only acceleration",
@@ -117,5 +119,12 @@ def run_epoch(args, phase: str):
         
         true_positive = (net_output.topk(1)[1].squeeze() == label).float()
         acc_list.append(torch.sum(true_positive))
+        
+        f1score = metrics.f1_score(
+            torch.argmax(net_output, dim=1).cpu().numpy(),
+            label.cpu().numpy(),
+            average="weighted"
+        )
+        f1_list.append(f1score)
     
-    return loss_list, acc_list
+    return loss_list, acc_list, f1_list

@@ -11,8 +11,8 @@ from models.models import DeepConvLSTM
 from utils import *
 
 def train(args):
-    train_loss, train_accuracy = run_epoch(args, phase="train")
-    val_loss, val_accuracy = run_epoch(args, phase="val")
+    train_loss, train_accuracy, train_f1score = run_epoch(args, phase="train")
+    val_loss, val_accuracy, val_f1score = run_epoch(args, phase="val")
     
     args.loss["train_loss_list"].append(np.mean(train_loss).item())
     args.loss["val_loss_list"].append(np.mean(val_loss).item())
@@ -20,13 +20,17 @@ def train(args):
     args.accuracy["train_accuracy_list"].append((sum(train_accuracy) / args.dataset_sizes[0]).item())
     args.accuracy["val_accuracy_list"].append((sum(val_accuracy) / args.dataset_sizes[1]).item())
     
+    args.f1score["train_f1score_list"].append(np.mean(train_f1score).item())
+    args.f1score["val_f1score_list"].append(np.mean(val_f1score).item())
+    
     return
 
 def test(args):
-    test_loss, test_accuracy = run_epoch(args, phase="test")
+    test_loss, test_accuracy, test_f1score = run_epoch(args, phase="test")
     
     args.loss["test_loss"] = np.mean(test_loss).item()
     args.accuracy["test_accuracy"] = (sum(test_accuracy) / args.dataset_sizes[2]).item()
+    args.f1score["test_f1score"] = np.mean(test_f1score).item()
     
     return
 
@@ -56,4 +60,5 @@ def run(custom_arg=None):
 
 if __name__ == "__main__":
     args = run()    # run([]) or run("{custom arguments}") for colab environment
-    print(args.loss["test_loss"])
+    print(args.f1score["test_f1score"])
+    print(args.f1score["train_f1score_list"])
