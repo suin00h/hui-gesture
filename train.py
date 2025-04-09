@@ -25,6 +25,11 @@ SETTINGS = [
         in_sensors = ["imu_ori"]
     ),
     dict(
+        setting_name = "Only EMG",
+        in_channels = 8,
+        in_sensors = ["emg"]
+    ),
+    dict(
         setting_name = "All sensor w/ input level concatenation",
         in_channels = 3 + 3 + 4 + 8,
         in_sensors = ["imu_acc", "imu_gyro", "imu_ori", "emg"]
