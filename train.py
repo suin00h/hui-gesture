@@ -11,47 +11,8 @@ from models.models import DeepConvLSTM
 from utils import *
 
 def train(args):
-    net = args.net
-    opt = args.optimizer
-    crit = args.criterion
-    device = args.device
-    
-    train_loss = []
-    train_accuracy = []
-    val_loss = []
-    val_accuracy = []
-    
-    dataloader = args.dataloaders[0]
-    net.train()
-    for batch in dataloader:
-        sensor_input = get_concatenated_sensor(args, batch).float().to(device)
-        label = batch["label"].long().to(device)
-        
-        opt.zero_grad()
-        
-        net_output = net(sensor_input)
-        
-        loss = crit(net_output, label)
-        train_loss.append(loss.item())
-        loss.backward()
-        opt.step()
-        
-        equal = (net_output.topk(1)[1].squeeze() == label).float()
-        train_accuracy.append(torch.sum(equal))
-    
-    dataloader = args.dataloaders[1]
-    net.eval()
-    for batch in dataloader:
-        sensor_input = get_concatenated_sensor(args, batch).float().to(device)
-        label = batch["label"].long().to(device)
-        
-        net_output = net(sensor_input)
-        
-        loss = crit(net_output, label)
-        val_loss.append(loss.item())
-        
-        equal = (net_output.topk(1)[1].squeeze() == label).float()
-        val_accuracy.append(torch.sum(equal))
+    train_loss, train_accuracy = run_epoch(args, phase="train")
+    val_loss, val_accuracy = run_epoch(args, phase="val")
     
     args.loss["train_loss_list"].append(np.mean(train_loss).item())
     args.loss["val_loss_list"].append(np.mean(val_loss).item())
@@ -62,26 +23,7 @@ def train(args):
     return
 
 def test(args):
-    net = args.net
-    crit = args.criterion
-    device = args.device
-    
-    test_loss = []
-    test_accuracy = []
-    
-    dataloader = args.dataloaders[2]
-    net.eval()
-    for batch in dataloader:
-        sensor_input = get_concatenated_sensor(args, batch).float().to(device)
-        label = batch["label"].long().to(device)
-        
-        net_output = net(sensor_input)
-        
-        loss = crit(net_output, label)
-        test_loss.append(loss.item())
-        
-        equal = (net_output.topk(1)[1].squeeze() == label).float()
-        test_accuracy.append(torch.sum(equal))
+    test_loss, test_accuracy = run_epoch(args, phase="test")
     
     args.loss["test_loss"] = np.mean(test_loss).item()
     args.accuracy["test_accuracy"] = (sum(test_accuracy) / args.dataset_sizes[2]).item()

@@ -85,3 +85,37 @@ def set_metrics(args, metrics):
             f"test_{metric}": None
         })
     return
+
+def run_epoch(args, phase: str):
+    no_train = phase_idx = ["train", "val", "test"].index(phase)
+    dataloaders = args.dataloaders[phase_idx]
+    net = args.net
+    opt = args.optimizer
+    device = args.device
+    
+    loss_list = []
+    acc_list = []
+    f1_list = []
+    
+    if no_train:
+        net.eval()
+    else:
+        net.train()
+    
+    for batch in dataloaders:
+        sensor_input = get_concatenated_sensor(args, batch).float().to(device)
+        label = batch["label"].long().to(device)
+        
+        if not no_train: opt.zero_grad()
+        net_output = net(sensor_input)
+        
+        loss = args.criterion(net_output, label)
+        loss_list.append(loss.item())
+        if not no_train:
+            loss.backward()
+            opt.step()
+        
+        true_positive = (net_output.topk(1)[1].squeeze() == label).float()
+        acc_list.append(torch.sum(true_positive))
+    
+    return loss_list, acc_list
