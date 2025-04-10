@@ -127,7 +127,7 @@ def run_epoch(args, phase: str):
         net.train()
     
     for batch in dataloaders:
-        sensor_input = [batch[sensor].float() for sensor in args.in_sensors]
+        sensor_input = [batch[sensor].float().to(device) for sensor in args.in_sensors]
         if not args.concat_latent:
             sensor_input = torch.cat(sensor_input, dim=2)
         label = batch["label"].long().to(device)

@@ -70,7 +70,9 @@ class DeepConvLSTM_latent(nn.Module):
         self.lstm_layers = args.lstm_layers
         self.num_classes = args.num_classes
         
-        self.conv_block_list = [self.get_conv_block(in_channel) for in_channel in self.in_channels]
+        self.conv_block_list = nn.ModuleList(
+            [self.get_conv_block(in_channel) for in_channel in self.in_channels]
+        )
         
         self.lstm = nn.LSTM(
             64 * len(self.in_channels),
@@ -108,7 +110,7 @@ class DeepConvLSTM_latent(nn.Module):
         latent_list = []
         for i, conv_block in enumerate(self.conv_block_list):
             x = torch.transpose(x_list[i], 1, 2)
-            for conv in conv_block:
+            for conv in conv_block: # type: ignore
                 x = conv(x)
             latent_list.append(x)
         
