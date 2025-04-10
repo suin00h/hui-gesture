@@ -1,4 +1,3 @@
-import argparse
 import torch
 import torch.nn as nn
 import numpy as np
@@ -7,7 +6,7 @@ from tqdm.auto import tqdm
 from torch import optim
 
 from data.dataset import Sign_Language_Dataset
-from models.models import DeepConvLSTM
+from models.models import *
 from utils import *
 
 def train(args):
@@ -37,6 +36,7 @@ def test(args):
 def run(custom_arg=None):
     args = get_parser().parse_args(args=custom_arg)
     get_settings(args)
+    print(args.setting_title)
     
     args.device = "cuda" if torch.cuda.is_available() else "cpu"
     
@@ -45,15 +45,19 @@ def run(custom_arg=None):
     args.dataset_sizes = [len(split) for split in dataset_split]
     args.dataloaders = [get_dataloader(split, args) for split in dataset_split]
     
-    args.net = DeepConvLSTM(args.in_channels, 400, kernel_size=10, stride=2)
+    if args.concat_latent:
+        args.net = DeepConvLSTM_latent(args)
+    else:
+        args.net = DeepConvLSTM(args)
     args.optimizer = optim.Adam(args.net.parameters(), lr=args.learning_rate)
     args.criterion = nn.CrossEntropyLoss()
     
     set_metrics(args, ["loss", "accuracy", "f1score"])
     
     args.net.to(args.device)
-    for _ in tqdm(range(args.epoch)):
-        train(args)
+    if not args.test_only:
+        for _ in tqdm(range(args.epoch)):
+            train(args)
     test(args)
     
     return args

@@ -5,70 +5,87 @@ from sklearn import metrics
 
 SETTINGS = [
     dict(
-        setting_name = "Only acceleration",
+        sensor_type = "acceleration",
         in_channels = 3,
-        in_sensors = ["imu_acc"]
+        sensor_key = ["imu_acc"]
     ),
     dict(
-        setting_name = "Only gyroscope",
+        sensor_type = "gyroscope",
         in_channels = 3,
-        in_sensors = ["imu_gyro"]
+        sensor_key = ["imu_gyro"]
     ),
     dict(
-        setting_name = "Only orientation",
+        sensor_type = "orientation",
         in_channels = 4,
-        in_sensors = ["imu_ori"]
+        sensor_key = ["imu_ori"]
     ),
     dict(
-        setting_name = "Only EMG",
+        sensor_type = "EMG",
         in_channels = 8,
-        in_sensors = ["emg"]
-    ),
-    dict(
-        setting_name = "All sensor w/ input level concatenation",
-        in_channels = 3 + 3 + 4 + 8,
-        in_sensors = ["imu_acc", "imu_gyro", "imu_ori", "emg"]
+        sensor_key = ["emg"]
     )
 ]
 
 def get_parser():
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("--preset-idx", default=0, type=int)
+    # Train settings
+    parser.add_argument("--sensor-idxs", action="extend", nargs="+", type=int)
     parser.add_argument("--epoch", default=200, type=int)
-    parser.add_argument("--batch-size", default=100, type=int)
-    parser.add_argument("--learning-rate", default=2e-4, type=float)
+    parser.add_argument("--concat-latent", action="store_true")
     parser.add_argument("--test-only", action="store_true")
     
-    parser.add_argument("--device")
+    parser.add_argument("--setting-title")
+    
+    # Hyperparameters
+    parser.add_argument("--batch-size", default=100, type=int)
+    parser.add_argument("--learning-rate", default=2e-4, type=float)
+    
+    # Internal variables
+    ## Data
     parser.add_argument("--dataset-sizes")
     parser.add_argument("--dataloaders")
     
+    ## Model
+    parser.add_argument("--device")
     parser.add_argument("--net")
     parser.add_argument("--optimizer")
     parser.add_argument("--criterion")
     
+    parser.add_argument("--in-channels")
+    parser.add_argument("--in-sensors")
+    parser.add_argument("--input-length", default=400)
+    parser.add_argument("--kernel-size", default=10)
+    parser.add_argument("--stride", default=2)
+    parser.add_argument("--lstm-hidden-size", default=128)
+    parser.add_argument("--lstm-layers", default=2)
+    parser.add_argument("--num-classes", default=26)
+    
+    ## Metrics
     parser.add_argument("--loss")
     parser.add_argument("--accuracy")
     parser.add_argument("--f1score")
     
-    parser.add_argument("--setting-name")
-    parser.add_argument("--in-channels")
-    parser.add_argument("--in-sensors")
     
     return parser
 
 def get_settings(args):
-    preset_dict = SETTINGS[args.preset_idx]
-    args.setting_name = preset_dict["setting_name"]
-    args.in_channels = preset_dict["in_channels"]
-    args.in_sensors = preset_dict["in_sensors"]
+    setting_title = "Using "
+    in_channels = []
+    in_sensors = []
+    
+    for sensor_idx in args.sensor_idxs:
+        sensor_dict = SETTINGS[sensor_idx]
+        
+        setting_title += sensor_dict["sensor_type"] + " "
+        in_channels.append(sensor_dict["in_channels"])
+        in_sensors += sensor_dict["sensor_key"]
+    
+    args.setting_title = setting_title
+    args.in_channels = in_channels
+    args.in_sensors = in_sensors
     
     return
-
-def get_concatenated_sensor(args, batch):
-    batch_list = [batch[sensor] for sensor in args.in_sensors]
-    return torch.cat(batch_list, dim=2)
 
 def get_dataloader(dataset, args):
     return torch.utils.data.DataLoader(
@@ -90,7 +107,7 @@ def set_metrics(args, metrics):
 
 def show_settings():
     for i, setting in enumerate(SETTINGS):
-        print(f"{i}: {setting['setting_name']}")
+        print(f"{i}: {setting['sensor_type']}")
     return
 
 def run_epoch(args, phase: str):
@@ -110,7 +127,9 @@ def run_epoch(args, phase: str):
         net.train()
     
     for batch in dataloaders:
-        sensor_input = get_concatenated_sensor(args, batch).float().to(device)
+        sensor_input = [batch[sensor].float() for sensor in args.in_sensors]
+        if not args.concat_latent:
+            sensor_input = torch.cat(sensor_input, dim=2)
         label = batch["label"].long().to(device)
         
         if not no_train: opt.zero_grad()
