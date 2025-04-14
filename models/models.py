@@ -88,11 +88,10 @@ class DeepConvLSTM_latent(nn.Module):
         )
     
     def get_conv_block(self, in_channel):
-        conv_block = nn.ModuleList()
-        conv_block.append(self.get_conv_layer(in_channel, 64))
+        conv_block = [self.get_conv_layer(in_channel, 64)]
         for _ in range(3):
             conv_block.append(self.get_conv_layer(64, 64))
-        return conv_block
+        return nn.Sequential(*conv_block)
     
     def get_conv_layer(self, in_channel, out_channel):
         return nn.Sequential(
@@ -110,8 +109,7 @@ class DeepConvLSTM_latent(nn.Module):
         latent_list = []
         for i, conv_block in enumerate(self.conv_block_list):
             x = torch.transpose(x_list[i], 1, 2)
-            for conv in conv_block: # type: ignore
-                x = conv(x)
+            x = conv_block(x)
             latent_list.append(x)
         
         x = torch.cat(latent_list, dim=1)

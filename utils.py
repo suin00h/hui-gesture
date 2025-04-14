@@ -1,7 +1,7 @@
 import argparse
 import torch
 
-from sklearn import metrics
+from models.models import *
 
 SETTINGS = [
     dict(
@@ -43,7 +43,6 @@ def get_parser():
     
     # Internal variables
     ## Data
-    parser.add_argument("--dataset-sizes")
     parser.add_argument("--dataloaders")
     
     ## Model
@@ -62,14 +61,12 @@ def get_parser():
     parser.add_argument("--num-classes", default=26)
     
     ## Metrics
-    parser.add_argument("--loss")
-    parser.add_argument("--accuracy")
-    parser.add_argument("--f1score")
+    parser.add_argument("--metrics")
     
     
     return parser
 
-def get_settings(args):
+def set_settings(args):
     setting_title = "Using "
     in_channels = []
     in_sensors = []
@@ -84,10 +81,16 @@ def get_settings(args):
     args.setting_title = setting_title
     args.in_channels = in_channels
     args.in_sensors = in_sensors
-    
-    return
 
-def get_dataloader(dataset, args):
+def set_device(args):
+    args.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+def set_dataloader(args, dataset, lengths):
+    dataset_split = torch.utils.data.random_split(dataset, lengths)
+    dataset_zip = zip(["train", "val", "test"], dataset_split)
+    args.dataloaders = {phase: get_dataloader(args, split) for phase, split in dataset_zip}
+
+def get_dataloader(args, dataset):
     return torch.utils.data.DataLoader(
         dataset=dataset,
         batch_size=args.batch_size,
@@ -96,59 +99,26 @@ def get_dataloader(dataset, args):
         pin_memory=True
     )
 
-def set_metrics(args, metrics):
-    for metric in metrics:
-        setattr(args, metric, {
-            f"train_{metric}_list": [],
-            f"val_{metric}_list": [],
-            f"test_{metric}": None
-        })
-    return
+def set_network(args):
+    if args.concat_latent:
+        args.net = DeepConvLSTM_latent(args)
+    else:
+        args.net = DeepConvLSTM(args)
+
+def set_metrics(args):
+    args.metrics = dict(
+        loss=get_metric_dict(),
+        accuracy=get_metric_dict(),
+        f1score=get_metric_dict(),
+    )
+
+def get_metric_dict():
+    return dict(
+        train=[],
+        val=[],
+        test=[]
+    )
 
 def show_settings():
     for i, setting in enumerate(SETTINGS):
         print(f"{i}: {setting['sensor_type']}")
-    return
-
-def run_epoch(args, phase: str):
-    no_train = phase_idx = ["train", "val", "test"].index(phase)
-    dataloaders = args.dataloaders[phase_idx]
-    net = args.net
-    opt = args.optimizer
-    device = args.device
-    
-    loss_list = []
-    acc_list = []
-    f1_list = []
-    
-    if no_train:
-        net.eval()
-    else:
-        net.train()
-    
-    for batch in dataloaders:
-        sensor_input = [batch[sensor].float().to(device) for sensor in args.in_sensors]
-        if not args.concat_latent:
-            sensor_input = torch.cat(sensor_input, dim=2)
-        label = batch["label"].long().to(device)
-        
-        if not no_train: opt.zero_grad()
-        net_output = net(sensor_input)
-        
-        loss = args.criterion(net_output, label)
-        loss_list.append(loss.item())
-        if not no_train:
-            loss.backward()
-            opt.step()
-        
-        true_positive = (net_output.topk(1)[1].squeeze() == label).float()
-        acc_list.append(torch.sum(true_positive))
-        
-        f1score = metrics.f1_score(
-            torch.argmax(net_output, dim=1).cpu().numpy(),
-            label.cpu().numpy(),
-            average="weighted"
-        )
-        f1_list.append(f1score)
-    
-    return loss_list, acc_list, f1_list
