@@ -3,5 +3,6 @@ dummy.py
 
 __pycache__
 data/raw/*
+data/processed/myo-gym-data-dict.pkl
 
 !.gitkeep
