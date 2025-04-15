@@ -47,9 +47,9 @@ class Trainer():
         self.run_phase("test")
     
     def run_phase(self, phase: str):
-        metrics = self.run_epoch(phase)
+        phase_metrics = self.run_epoch(phase)
         
-        self.log_metrics(metrics, phase)
+        self.log_metrics(phase_metrics, phase)
     
     def run_epoch(self, phase: str):
         is_train = phase == "train"
