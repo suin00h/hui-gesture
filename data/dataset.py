@@ -56,10 +56,12 @@ class MyoGym_Dataset(Dataset):
         
         batch_list = []
         label_list = []
-        WINDOW_SIZE = 200 
+        WINDOW_SIZE = 200
         STEP_SIZE = 50 # sampling_freq = 50 Hz
         
         for exercise, person in itertools.product(exercises, persons):
+            if exercise == 99:
+                continue
             query_df = (raw_["exercise"] == exercise) & (raw_["person"] == person)
             raw_target = raw_.loc[query_df].to_numpy()
             
@@ -68,10 +70,10 @@ class MyoGym_Dataset(Dataset):
             for i in range(num_windows):
                 start_idx = i * STEP_SIZE
                 batch_list.append(raw_target[start_idx:start_idx + WINDOW_SIZE])
-                label_list.append(exercise)
+                label_list.append(exercise - 1)
             if remainder:
                 batch_list.append(raw_target[-WINDOW_SIZE:])
-                label_list.append(exercise)
+                label_list.append(exercise - 1)
         # got (T, F) * 310
         # each (T, F) has same label
         # sliding window will make them into (Num_windows, Window_size, Feature_num)

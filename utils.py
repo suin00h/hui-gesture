@@ -53,12 +53,12 @@ def get_parser():
     
     parser.add_argument("--in-channels")
     parser.add_argument("--in-sensors")
-    parser.add_argument("--input-length", default=400)
-    parser.add_argument("--kernel-size", default=10)
-    parser.add_argument("--stride", default=2)
-    parser.add_argument("--lstm-hidden-size", default=128)
-    parser.add_argument("--lstm-layers", default=2)
-    parser.add_argument("--num-classes", default=26)
+    parser.add_argument("--input-length", default=400, type=int)
+    parser.add_argument("--kernel-size", default=10, type=int)
+    parser.add_argument("--stride", default=2, type=int)
+    parser.add_argument("--lstm-hidden-size", default=128, type=int)
+    parser.add_argument("--lstm-layers", default=2, type=int)
+    parser.add_argument("--num-classes", default=26, type=int)
     
     ## Metrics
     parser.add_argument("--metrics")
