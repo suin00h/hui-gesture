@@ -100,10 +100,7 @@ def get_dataloader(args, dataset):
     )
 
 def set_network(args):
-    if args.concat_latent:
-        args.net = DeepConvLSTM_latent(args)
-    else:
-        args.net = DeepConvLSTM(args)
+    args.net = DeepConvLSTM(args)
 
 def set_metrics(args):
     args.metrics = dict(
