@@ -1,5 +1,7 @@
 import argparse
 import torch
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from models.models import *
 
@@ -36,6 +38,7 @@ def get_parser():
     parser.add_argument("--test-only", action="store_true")
     
     parser.add_argument("--setting-title")
+    parser.add_argument("--trainer")
     
     # Hyperparameters
     parser.add_argument("--batch-size", default=100, type=int)
@@ -62,7 +65,6 @@ def get_parser():
     
     ## Metrics
     parser.add_argument("--metrics")
-    
     
     return parser
 
@@ -103,11 +105,8 @@ def set_network(args):
     args.net = DeepConvLSTM(args)
 
 def set_metrics(args):
-    args.metrics = dict(
-        loss=get_metric_dict(),
-        accuracy=get_metric_dict(),
-        f1score=get_metric_dict(),
-    )
+    metric_list = ["loss", "accuracy", "f1score"]
+    args.metrics = { metric: get_metric_dict() for metric in metric_list }
 
 def get_metric_dict():
     return dict(
@@ -119,3 +118,11 @@ def get_metric_dict():
 def show_settings():
     for i, setting in enumerate(SETTINGS):
         print(f"{i}: {setting['sensor_type']}")
+
+def show_confusion_matrix(confusion_matrix):
+    cm = confusion_matrix / confusion_matrix.sum(axis=1, keepdims=True)
+    sns.heatmap(cm, cmap="Blues", annot=True)
+    plt.xlabel("Predicted")
+    plt.ylabel("Ground Truth")
+    
+    plt.show()

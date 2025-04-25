@@ -23,6 +23,7 @@ def run(custom_arg=None):
     
     trainer = Trainer(args)
     trainer.run()
+    args.trainer = trainer
     
     return args
 
@@ -38,6 +39,7 @@ class Trainer():
         self.concat_latent = args.concat_latent
         self.opt = args.optimizer
         self.crit = args.criterion
+        self.confusion_matrix = self.set_confusion_matrix(args.num_classes)
     
     def run(self):
         self.network_to_device()
@@ -67,6 +69,8 @@ class Trainer():
             
             accuracy = self.get_accuracy(net_output, label)
             f1score = self.get_f1score(net_output, label)
+            if phase == "test":
+                self.confusion_matrix += self.get_confusion_matrix(net_output, label)
             
             metrics_epoch["loss"].append(loss.item())
             metrics_epoch["accuracy"].append(accuracy)
@@ -111,7 +115,7 @@ class Trainer():
         return [batch[sensor].float().to(self.device) for sensor in self.in_sensors]
     
     def get_accuracy(self, output, label):
-        true_positive = output.topk(1)[1].squeeze() == label
+        true_positive = torch.argmax(output, dim=1).squeeze() == label
         return true_positive.sum().item() / len(label)
     
     def get_f1score(self, output, label):
@@ -125,10 +129,49 @@ class Trainer():
         for key, value in metrics.items():
             metric = np.mean(value).item()
             self.metrics[key][phase].append(metric)
+    
+    def set_confusion_matrix(self, num_classes):
+        return np.zeros((num_classes, num_classes))
+
+    def get_confusion_matrix(self, output, true):
+        pred = torch.argmax(output, dim=1).squeeze()
+        return metrics.confusion_matrix(true, pred, labels=np.arange(26))
+
+def test_code(code_idx):
+    if code_idx == 1:
+        args = run()    # run([]) or run("{custom arguments}") for colab environment
+        print(args.metrics["loss"]["train"])
+        print(args.metrics["loss"]["test"])
+        print(args.metrics["f1score"]["test"])
+        print(args.metrics["accuracy"]["test"])
+    elif code_idx == 2:
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+        
+        fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+        
+        y_true = np.random.randint(0, 5, (10,))
+        y_pred = np.random.randint(0, 5, (10,))
+        
+        cm = metrics.confusion_matrix(y_true, y_pred)
+        sns.heatmap(cm, ax=axes[0, 0], cmap="Blues")
+        print(y_true, y_pred, cm)
+        
+        y_true = np.random.randint(0, 5, (10,))
+        y_pred = np.random.randint(0, 5, (10,))
+        
+        cm2 = metrics.confusion_matrix(y_true, y_pred)
+        sns.heatmap(cm2, ax=axes[0, 1], cmap="Blues")
+        sns.heatmap(cm + cm2, ax=axes[1, 0], cmap="Blues")
+        
+        plt.xlabel("Predicted")
+        plt.ylabel("Ground Truth")
+        print(y_true)
+        print(y_pred)
+        plt.show()
+    elif code_idx == 3:
+        args = run("--sensor-idxs 0 --epoch 1".split())
+        show_confusion_matrix(args.trainer.confusion_matrix)
 
 if __name__ == "__main__":
-    args = run()    # run([]) or run("{custom arguments}") for colab environment
-    print(args.metrics["loss"]["train"])
-    print(args.metrics["loss"]["test"])
-    print(args.metrics["f1score"]["test"])
-    print(args.metrics["accuracy"]["test"])
+    test_code(3)

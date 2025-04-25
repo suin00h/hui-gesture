@@ -1,5 +1,6 @@
 .DS_STORE
 dummy.py
+exp.sh
 
 __pycache__
 data/raw/*
