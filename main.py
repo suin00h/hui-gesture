@@ -120,8 +120,8 @@ class Trainer():
     
     def get_f1score(self, output, label):
         return metrics.f1_score(
-            torch.argmax(output, dim=1).cpu().numpy(),
-            label.cpu().numpy(),
+            torch.argmax(output, dim=1).cpu(),
+            label.cpu(),
             average="macro"
         )
     
@@ -133,8 +133,9 @@ class Trainer():
     def set_confusion_matrix(self, num_classes):
         return np.zeros((num_classes, num_classes))
 
-    def get_confusion_matrix(self, output, true):
-        pred = torch.argmax(output, dim=1).squeeze()
+    def get_confusion_matrix(self, output, label):
+        pred = torch.argmax(output, dim=1).squeeze().cpu()
+        true = label.cpu()
         return metrics.confusion_matrix(true, pred, labels=np.arange(26))
 
 def test_code(code_idx):
