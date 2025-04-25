@@ -119,9 +119,10 @@ def show_settings():
     for i, setting in enumerate(SETTINGS):
         print(f"{i}: {setting['sensor_type']}")
 
-def show_confusion_matrix(confusion_matrix):
+def show_confusion_matrix(confusion_matrix, figsize=(6, 6)):
     cm = confusion_matrix / confusion_matrix.sum(axis=1, keepdims=True)
     sns.heatmap(cm, cmap="Blues", annot=True)
+    plt.figure(figsize=figsize)
     plt.xlabel("Predicted")
     plt.ylabel("Ground Truth")
     
