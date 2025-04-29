@@ -4,6 +4,7 @@ exp.sh
 
 __pycache__
 data/raw/*
+data/log/*
 data/processed/myo-gym-data-dict.pkl
 
 !.gitkeep
