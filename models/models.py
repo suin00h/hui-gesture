@@ -5,7 +5,7 @@ from torch import nn
 class DeepConvLSTM(nn.Module):
     def __init__(self, args):
         super().__init__()
-        self.in_channels = args.in_channels
+        self.in_channels = args.in_channels # List[int]
         self.out_channel = 64
         self.kernel_size = args.kernel_size
         self.stride = args.stride
@@ -13,7 +13,7 @@ class DeepConvLSTM(nn.Module):
         self.lstm_hidden_size = args.lstm_hidden_size
         self.lstm_layers = args.lstm_layers
         self.input_length = args.input_length
-        self.num_classes = args.num_classes
+        self.num_class = args.num_class
         self.fc_input_size = self.get_fc_input_size()
         
         if not self.concat_latent:
@@ -38,7 +38,7 @@ class DeepConvLSTM(nn.Module):
         )
         
         self.fc = nn.Sequential(
-            nn.Linear(self.fc_input_size, self.num_classes),
+            nn.Linear(self.fc_input_size, self.num_class),
             nn.Softmax(dim=1)
         )
     
@@ -52,6 +52,9 @@ class DeepConvLSTM(nn.Module):
         return size
     
     def forward(self, x_list):
+        """
+        x_list: List[Tensor(B, Length, C)]
+        """
         if not self.concat_latent:
             x_list = [torch.cat(x_list, dim=2)]
         latent_list = []
