@@ -34,7 +34,7 @@ def run(custom_arg=None):
     return tracker
 
 class Trainer():
-    def __init__(self, args, tracker, logger):
+    def __init__(self, args, tracker: "MetricTracker", logger: "Logger"):
         self.net = args.net
         self.opt = args.optimizer
         self.crit = args.criterion
@@ -54,15 +54,22 @@ class Trainer():
         self.network_to_device()
         
         if not self.test_only:
-            for _ in tqdm(range(self.epoch)):
-                self.run_epoch()
+            self.logger(f"Running ...")
+            self.logger.write_payload()
+            
+            for e in tqdm(range(self.epoch)):
+                self.run_epoch(e + 1)
         
         self.step("test")
     
-    def run_epoch(self):
+    def run_epoch(self, epoch):
+        self.logger(f"Epoch {epoch}")
         self.step("train")
         with torch.no_grad():
             self.step("val")
+        
+        if epoch % 5 == 0:
+            self.logger.write_payload()
     
     def step(self, phase):
         self.tracker.set_step_metric(phase)
@@ -86,10 +93,11 @@ class Trainer():
             
             self.tracker.update_step_metric(loss, net_output, label)
         
-        self.tracker.step()
+        self.tracker.step(self.logger, phase)
     
     def network_to_device(self):
         self.net.to(self.device)
+        self.logger(f"Network is on {self.device}")
     
     def process_batch(self, batch):
         sensor_input = self.get_sensor_list(batch)
@@ -131,14 +139,16 @@ class MetricTracker():
         if self.phase == "test":
             self.confusion_matrix += self.get_confusion_matrix(output, label)
     
-    def step(self):
+    def step(self, logger: "Logger", phase: str):
         """
         Called after all batch iteration
         Accumulate metrics from batch
         """
+        logger(f"{phase}")
         for key, value in self.metric_step.items():
             metric = np.mean(value).item()
             self.metrics[self.phase][key].append(metric)
+            logger(f"  {key:<10}: {metric:.2f}")
     
     def get_accuracy(self, output, label):
         true_positive = torch.argmax(output, dim=1).squeeze() == label
@@ -176,8 +186,12 @@ class Logger():
         self.payload += log_string + "\n"
     
     def write_payload(self):
-        with open(self.log_dir / "log.txt", "a") as log:
-            log.write(self.payload)
+        if self.save_log:
+            with open(self.log_dir / "log.txt", "a") as log:
+                log.write(self.payload)
+        self.flush()
+    
+    def flush(self):
         self.payload = ""
     
     def log_args(self, args):
@@ -199,8 +213,7 @@ class Logger():
         full_str = f"{header}\n{args_str}\n{footer}"
         
         self(full_str)
-        if self.save_log:
-            self.write_payload()
+        self.write_payload()
     
     def set_log_dir(self):
         root_dir = Path(__file__).resolve().parent
