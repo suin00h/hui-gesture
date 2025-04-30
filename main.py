@@ -4,6 +4,7 @@ import numpy as np
 
 from torch import nn
 from torch import optim
+from pathlib import Path
 from sklearn import metrics
 from datetime import datetime
 from tqdm.auto import tqdm
@@ -27,7 +28,7 @@ def run(custom_arg=None):
     tracker = MetricTracker(num_class=args.num_class)
     logger = Logger(args)
     trainer = Trainer(args, tracker, logger)
-    return
+    
     trainer.run()
     
     return tracker
@@ -47,8 +48,7 @@ class Trainer():
         self.tracker = tracker
         self.logger = logger
         
-        logger(args.setting_description)
-        logger.log_args(args)
+        self.logger(args.setting_description)
     
     def run(self):
         self.network_to_device()
@@ -166,28 +166,45 @@ class Logger():
         
         self.payload = ""
         self.title = self.get_title(args)
+        
         self.set_log_dir()
+        self.log_args(args)
     
-    def __call__(self, log_string):
-        tqdm.write(log_string)
+    def __call__(self, log_string, hide=False):
+        if not hide:
+            tqdm.write(log_string)
         self.payload += log_string + "\n"
     
     def write_payload(self):
-        with open(self.log_dir + "/log.txt", "a") as log:
+        with open(self.log_dir / "log.txt", "a") as log:
             log.write(self.payload)
         self.payload = ""
     
     def log_args(self, args):
-        header = "Experiment Settings:\n" + "-" * 60
-        args_str = "\n".join(f"{k:<20}: {v}" for k, v in vars(args).items())
-        footer = "-" * 60
+        bar_length = 45
+        header = "Experiment Settings:\n" + "-" * bar_length
+        args_str = [f"{'Epoch':<20}: {args.epoch}",
+                    f"{'Batch size':<20}: {args.batch_size}",
+                    
+                    f"{'Optimizer:':<20}: {type(args.optimizer).__name__}",
+                    f"{'Learning rate:':<20}: {args.learning_rate}",
+                    
+                    f"{'Network:':<20}: {type(args.net).__name__}",
+                    f"{'Input length:':<20}: {args.input_length}",
+                    f"{'Kernel size:':<20}: {args.kernel_size}",
+                    f"{'Stride:':<20}: {args.stride}",
+                    f"{'LSTM layers:':<20}: {args.lstm_layers}",]
+        args_str = '\n'.join(args_str)
+        footer = "-" * bar_length
         full_str = f"{header}\n{args_str}\n{footer}"
         
         self(full_str)
-        self.write_payload()
+        if self.save_log:
+            self.write_payload()
     
     def set_log_dir(self):
-        self.log_dir = os.path.join("log", self.title)
+        root_dir = Path(__file__).resolve().parent
+        self.log_dir = root_dir / "log" / self.title
         if self.save_log:
             os.makedirs(self.log_dir)
     

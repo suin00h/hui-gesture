@@ -42,7 +42,6 @@ def get_parser():
     parser.add_argument("--dataloaders")
     
     # Experiment settings
-    parser.add_argument("--log-dir")
     parser.add_argument("--setting-description")
     parser.add_argument("--save-log", action="store_true")
     parser.add_argument("--test-only", action="store_true")
