@@ -61,13 +61,12 @@ class Trainer():
                 self.logger(f"\nEpoch: {e + 1}", hide=True)
                 self.run_epoch()
                 if (e + 1) % 10 == 0:
-                    recent_log = self.logger.payload.split('\n')[-4:]
-                    print(*recent_log, sep='\n')
-                    self.logger.write_payload()
+                    self.logger.show_recent()
         
         self.logger(f"Running on test set")
         self.step("test")
-        self.logger.write_payload()
+        self.logger.show_recent()
+        print("Train complete")
     
     def run_epoch(self):
         self.step("train")
@@ -197,6 +196,11 @@ class Logger():
     
     def flush(self):
         self.payload = ""
+    
+    def show_recent(self):
+        recent_log = self.payload.split('\n')[-4:]
+        print(*recent_log, sep='\n')
+        self.write_payload()
     
     def log_args(self, args):
         bar_length = 45
