@@ -142,7 +142,7 @@ class Sign_Language_Dataset(Dataset):
             label = self.sign_dict["label"][idx]
         )
     
-    def get_sign_data(self):
+    def get_sign_data(self) -> dict:
         processed_file = os.path.join(
             DATA_PROCESSED_DIR,
             "sign-data-dict.pkl"

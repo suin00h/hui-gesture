@@ -4,6 +4,10 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from data.dataset import SIGN_LABELS
+from torch.utils.data import Subset
+from sklearn.model_selection import StratifiedKFold, train_test_split
+
 SETTINGS = [
     dict(
         sensor_type = "acceleration",
@@ -44,6 +48,8 @@ def get_parser():
     
     # Experiment settings
     parser.add_argument("--setting-description")
+    parser.add_argument("--seed", default=42, type=int)
+    parser.add_argument("--kfold", default=5, type=int)
     parser.add_argument("--save-log", action="store_true")
     parser.add_argument("--test-only", action="store_true")
     parser.add_argument("--sensor-idxs", action="extend", nargs="+", type=int)
@@ -80,15 +86,39 @@ def set_settings(args):
 def set_device(args):
     args.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-def set_dataloader(args, dataset, lengths):
-    dataset_split = torch.utils.data.random_split(dataset, lengths)
-    dataset_zip = zip(["train", "val", "test"], dataset_split)
+def get_kfold_dataloaders(dataset, labels, seed, k, batch_size):
+    kfold_list = []
+    
+    train_val_idx, test_idx = train_test_split(
+        np.arange(len(labels)),
+        test_size=0.1,
+        stratify=labels,
+        random_state=seed
+    )
+    
+    train_val_labels = labels[train_val_idx]
+    skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
+    
+    for train_idx, val_idx in skf.split(train_val_idx, train_val_labels):
+        train_dataset = Subset(dataset, train_val_idx[train_idx])
+        val_dataset = Subset(dataset, train_val_idx[val_idx])
+        kfold_list.append([
+            get_dataloader(train_dataset, batch_size),
+            get_dataloader(val_dataset, batch_size)
+        ])
+    
+    test_dataloader = get_dataloader(Subset(dataset, test_idx), batch_size)
+    
+    return kfold_list, test_dataloader
+
+def set_dataloader(args, dataloaders):
+    dataset_zip = zip(["train", "val", "test"], dataloaders)
     args.dataloaders = {phase: get_dataloader(args, split) for phase, split in dataset_zip}
 
-def get_dataloader(args, dataset):
+def get_dataloader(dataset, batch_size):
     return torch.utils.data.DataLoader(
         dataset=dataset,
-        batch_size=args.batch_size,
+        batch_size=batch_size,
         shuffle=True,
         num_workers=2,
         pin_memory=True
@@ -105,6 +135,30 @@ def show_settings():
     for i, setting in enumerate(SETTINGS):
         print(f"{i}: {setting['sensor_type']}")
 
+def plot_metrics(train_metrics, val_metrics, test_metric, title, figsize=(6, 6), ylim=(0, 1)):
+    print(f"Test {title}: {test_metric[0]:.2f}")
+    plt.figure(figsize=figsize)
+    plt.plot(train_metrics, label="Train")
+    plt.plot(val_metrics, label="Validation")
+
+    for metric in [train_metrics, val_metrics]:
+        last_value = metric[-1]
+        plt.annotate(
+            f"{last_value:.2f}",
+            xy=(len(metric) - 1, last_value), xytext=(0, 15),
+            textcoords="offset points",
+            ha="center", fontsize=10, color="red",
+            arrowprops=dict(arrowstyle="->", color="red")
+        )
+    
+    plt.xlabel("Epoch")
+    plt.ylim(ylim)
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+
+    plt.show()
+
 def show_confusion_matrix(confusion_matrix, figsize=(6, 6)):
     annot = np.empty_like(confusion_matrix, dtype=object)
     for row in range(confusion_matrix.shape[0]):
@@ -116,8 +170,9 @@ def show_confusion_matrix(confusion_matrix, figsize=(6, 6)):
           annot[row, col] = '0'
     
     plt.figure(figsize=figsize)
-    sns.heatmap(confusion_matrix, cmap="Blues", annot=annot, fmt="s")
+    sns.heatmap(confusion_matrix, cmap="Blues", annot=annot, fmt="s", xticklabels=SIGN_LABELS, yticklabels=SIGN_LABELS)
     plt.xlabel("Predicted")
     plt.ylabel("Ground Truth")
+    plt.yticks(rotation=0)
     
     plt.show()

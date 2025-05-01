@@ -19,19 +19,27 @@ def run(custom_arg=None):
     
     set_settings(args)
     set_device(args)
-    set_dataloader(args, Sign_Language_Dataset(), [0.8, 0.1, 0.1])
     
-    args.net = DeepConvLSTM(args)
-    args.optimizer = optim.Adam(args.net.parameters(), lr=args.learning_rate)
-    args.criterion = nn.CrossEntropyLoss()
+    dataset = Sign_Language_Dataset()
+    labels = dataset.sign_dict["label"]
+    kfold_list, test_dataloader = get_kfold_dataloaders(
+        dataset, labels, args.kfold, args.seed, args.batch_size)
     
-    tracker = MetricTracker(num_class=args.num_class)
-    logger = Logger(args)
-    trainer = Trainer(args, tracker, logger)
+    for fold, (train_dataloader, val_dataloader) in enumerate(kfold_list):
+        args.net = DeepConvLSTM(args)
+        args.optimizer = optim.Adam(args.net.parameters(), lr=args.learning_rate)
+        args.criterion = nn.CrossEntropyLoss()
+        set_dataloader(args, [train_dataloader, val_dataloader, test_dataloader])
+        
+        tracker = MetricTracker(num_class=args.num_class)
+        logger = Logger(args)
+        logger(args.setting_description)
+        logger(f"Fold: {fold}")
+        trainer = Trainer(args, tracker, logger)
+        
+        trainer.run()
     
-    trainer.run()
-    
-    return tracker
+    return
 
 class Trainer():
     def __init__(self, args, tracker: "MetricTracker", logger: "Logger"):
@@ -47,25 +55,22 @@ class Trainer():
         
         self.tracker = tracker
         self.logger = logger
-        
-        self.logger(args.setting_description)
     
     def run(self):
         self.network_to_device()
         
         if not self.test_only:
-            self.logger(f"Running ...")
-            self.logger.write_payload()
+            self.logger(f"Running ...", write=True)
             
             for e in tqdm(range(self.epoch)):
                 self.logger(f"\nEpoch: {e + 1}", hide=True)
                 self.run_epoch()
                 if (e + 1) % 10 == 0:
-                    self.logger.show_recent()
+                    self.logger.show_recent(4)
         
-        self.logger(f"Running on test set")
+        self.logger(f"\nRunning on test set", write=True)
         self.step("test")
-        self.logger.show_recent()
+        self.logger.show_recent(2)
         print("Train complete")
     
     def run_epoch(self):
@@ -183,10 +188,12 @@ class Logger():
         self.set_log_dir()
         self.log_args(args)
     
-    def __call__(self, log_string, hide=False):
+    def __call__(self, log_string, hide=False, write=False):
         if not hide:
             tqdm.write(log_string)
         self.payload += log_string + "\n"
+        if write:
+            self.write_payload()
     
     def write_payload(self):
         if self.save_log:
@@ -197,8 +204,8 @@ class Logger():
     def flush(self):
         self.payload = ""
     
-    def show_recent(self):
-        recent_log = self.payload.split('\n')[-4:]
+    def show_recent(self, n):
+        recent_log = self.payload.split('\n')[-n:]
         print(*recent_log, sep='\n')
         self.write_payload()
     
@@ -207,10 +214,8 @@ class Logger():
         header = "Experiment Settings:\n" + "-" * bar_length
         args_str = [f"{'Epoch':<20}: {args.epoch}",
                     f"{'Batch size':<20}: {args.batch_size}",
-                    
                     f"{'Optimizer:':<20}: {type(args.optimizer).__name__}",
                     f"{'Learning rate:':<20}: {args.learning_rate}",
-                    
                     f"{'Network:':<20}: {type(args.net).__name__}",
                     f"{'Input length:':<20}: {args.input_length}",
                     f"{'Kernel size:':<20}: {args.kernel_size}",
