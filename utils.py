@@ -1,5 +1,6 @@
-import argparse
 import torch
+import argparse
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -105,9 +106,17 @@ def show_settings():
         print(f"{i}: {setting['sensor_type']}")
 
 def show_confusion_matrix(confusion_matrix, figsize=(6, 6)):
-    cm = confusion_matrix / confusion_matrix.sum(axis=1, keepdims=True)
+    annot = np.empty_like(confusion_matrix, dtype=object)
+    for row in range(confusion_matrix.shape[0]):
+      total = sum(confusion_matrix[row])
+      for col in range(confusion_matrix.shape[1]):
+        if confusion_matrix[row, col]:
+          annot[row, col] = f"{confusion_matrix[row, col] / total:.2f}\n({int(confusion_matrix[row, col])})"
+        else:
+          annot[row, col] = '0'
+    
     plt.figure(figsize=figsize)
-    sns.heatmap(cm, cmap="Blues", annot=True)
+    sns.heatmap(confusion_matrix, cmap="Blues", annot=annot, fmt="s")
     plt.xlabel("Predicted")
     plt.ylabel("Ground Truth")
     

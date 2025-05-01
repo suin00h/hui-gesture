@@ -58,18 +58,21 @@ class Trainer():
             self.logger.write_payload()
             
             for e in tqdm(range(self.epoch)):
-                self.run_epoch(e + 1)
+                self.logger(f"\nEpoch: {e + 1}", hide=True)
+                self.run_epoch()
+                if (e + 1) % 10 == 0:
+                    recent_log = self.logger.payload.split('\n')[-4:]
+                    print(*recent_log, sep='\n')
+                    self.logger.write_payload()
         
+        self.logger(f"Running on test set")
         self.step("test")
+        self.logger.write_payload()
     
-    def run_epoch(self, epoch):
-        self.logger(f"Epoch {epoch}")
+    def run_epoch(self):
         self.step("train")
         with torch.no_grad():
             self.step("val")
-        
-        if epoch % 5 == 0:
-            self.logger.write_payload()
     
     def step(self, phase):
         self.tracker.set_step_metric(phase)
@@ -139,16 +142,17 @@ class MetricTracker():
         if self.phase == "test":
             self.confusion_matrix += self.get_confusion_matrix(output, label)
     
-    def step(self, logger: "Logger", phase: str):
+    def step(self, logger: "Logger", phase):
         """
         Called after all batch iteration
         Accumulate metrics from batch
         """
-        logger(f"{phase}")
+        log_str = f"  {phase:<10}"
         for key, value in self.metric_step.items():
             metric = np.mean(value).item()
             self.metrics[self.phase][key].append(metric)
-            logger(f"  {key:<10}: {metric:.2f}")
+            log_str += f"{key}: {metric:<6.2f}"
+        logger(log_str, hide=True)
     
     def get_accuracy(self, output, label):
         true_positive = torch.argmax(output, dim=1).squeeze() == label
